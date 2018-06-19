@@ -6,8 +6,7 @@ This is a Cordova/Phonegap plugin to interact with Motorola ruggedized devices' 
 =============
 
 This plugin is compatible with plugman.  To install, run the following from your project command line: 
-```$ cordova plugin add https://github.com/BlueFletch/motorola-datawedge-cordova-plugin.git```
-
+```$ cordova plugin add https://github.com/wakefern/motorola-datawedge-cordova-plugin.git```
 
 ==============
 
