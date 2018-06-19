@@ -27,7 +27,7 @@ import com.bluefletch.motorola.DataWedgeIntentHandler;
 import com.bluefletch.motorola.ScanCallback;
 
 public class MotorolaDatawedgePlugin extends CordovaPlugin {
-    
+
     private DataWedgeIntentHandler wedge;
     protected static String TAG = "MotorolaDatawedgePlugin";
 
@@ -44,17 +44,19 @@ public class MotorolaDatawedgePlugin extends CordovaPlugin {
                 @Override
                 public void execute(BarcodeScan scan) {
                     Log.i(TAG, "Scan result [" + scan.LabelType + "-" + scan.Barcode + "].");
-                    
+
                     try {
                         JSONObject obj = new JSONObject();
                         obj.put("type", scan.LabelType);
-                        obj.put("barcode", scan.Barcode);
+						obj.put("fullBarcode", scan.Barcode);
+                        obj.put("barcode", scan.Barcode.substring( 0, scan.Barcode.length() - 1 ));
+                        obj.put("checkDigit", scan.Barcode.substring( scan.Barcode.length() - 1 ));
                         PluginResult pluginResult = new PluginResult(PluginResult.Status.OK, obj);
                         pluginResult.setKeepCallback(true);
                         callbackContext.sendPluginResult(pluginResult);
                     } catch(JSONException e){
                         Log.e(TAG, "Error building json object", e);
-                        
+
                     }
                 }
             });
@@ -111,15 +113,15 @@ public class MotorolaDatawedgePlugin extends CordovaPlugin {
             //try to read intent action from inbound params
             String intentAction = null;
             if (args.length() > 0) {
-                intentAction = args.getString(0);  
-            } 
+                intentAction = args.getString(0);
+            }
             if (intentAction != null && intentAction.length() > 0) {
                 Log.i(TAG, "Intent action length  " + intentAction.length());
 
                 wedge.setDataWedgeIntentAction(intentAction);
             }
             wedge.start();
-        } 
+        }
 
         return true;
     }
@@ -135,7 +137,7 @@ public class MotorolaDatawedgePlugin extends CordovaPlugin {
 
     @Override
     public void onNewIntent(Intent intent) {
-        
+
         Log.i(TAG, "Got inbound intent  " + intent.getAction());
         wedge.handleIntent(intent);
     }
