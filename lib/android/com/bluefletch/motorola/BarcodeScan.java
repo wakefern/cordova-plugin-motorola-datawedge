@@ -6,8 +6,11 @@ package com.bluefletch.motorola;
 public class BarcodeScan {
 	public String LabelType;
 	public String Barcode;
-	public BarcodeScan (String label, String code){
+	public String Image;
+
+	public BarcodeScan (String label, String code, String image){
 		this.LabelType = label.trim();
 		this.Barcode = code.trim();
+		this.Image = image;
 	}
 }

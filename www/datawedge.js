@@ -92,6 +92,12 @@ DataWedge.prototype.stopScanner = function () {
 };
 
 
+/**
+ * Get Bitmap
+ */
+DataWedge.prototype.getBitmap = function (data,  imageFormat,  orientation,  stride,  width,  height) {
+    exec(null, null, 'ImageProcessing', 'imageProcessing.getBitmap', [data,  imageFormat,  orientation,  stride,  width,  height]);
+};
 
 
 //create instance

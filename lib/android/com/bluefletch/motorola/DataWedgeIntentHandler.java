@@ -5,19 +5,29 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.util.Log;
+import android.os.Bundle;
+import android.database.Cursor;
+import android.graphics.ImageFormat;
+import android.net.Uri;
 
 import com.bluefletch.motorola.BarcodeScan;
+import com.bluefletch.motorola.ImageProcessing;
 import com.bluefletch.motorola.ScanCallback;
 
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
+import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 import java.util.Iterator;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 public class DataWedgeIntentHandler {
-    
+
     protected static Object stateLock = new Object();
     protected static boolean hasInitialized = false;
 
@@ -28,8 +38,8 @@ public class DataWedgeIntentHandler {
     protected static String DEFAULT_ACTION = "com.bluefletch.motorola.datawedge.ACTION";
     protected String dataWedgeAction = DEFAULT_ACTION;
     /**
-    * This function must be called with the intent Action as configured in the DataWedge Application
-    **/
+     * This function must be called with the intent Action as configured in the DataWedge Application
+     **/
     public void setDataWedgeIntentAction(String action){
         Log.i(TAG, "Setting data wedge intent to " + action);
         if (action == null || "".equals(action)) return;
@@ -99,8 +109,8 @@ public class DataWedgeIntentHandler {
 
     protected void enableScanner(boolean shouldEnable) {
         Intent enableIntent = new Intent("com.motorolasolutions.emdk.datawedge.api.ACTION_SCANNERINPUTPLUGIN");
-        enableIntent.putExtra("com.motorolasolutions.emdk.datawedge.api.EXTRA_PARAMETER", 
-            shouldEnable ? "ENABLE_PLUGIN" : "DISABLE_PLUGIN");
+        enableIntent.putExtra("com.motorolasolutions.emdk.datawedge.api.EXTRA_PARAMETER",
+                shouldEnable ? "ENABLE_PLUGIN" : "DISABLE_PLUGIN");
 
         applicationContext.sendBroadcast(enableIntent);
     }
@@ -108,8 +118,8 @@ public class DataWedgeIntentHandler {
     public void startScanning(boolean turnOn) {
         synchronized (stateLock) {
             Intent scanOnIntent = new Intent("com.motorolasolutions.emdk.datawedge.api.ACTION_SOFTSCANTRIGGER");
-            scanOnIntent.putExtra("com.motorolasolutions.emdk.datawedge.api.EXTRA_PARAMETER", 
-                turnOn ? "START_SCANNING" : "STOP_SCANNING");
+            scanOnIntent.putExtra("com.motorolasolutions.emdk.datawedge.api.EXTRA_PARAMETER",
+                    turnOn ? "START_SCANNING" : "STOP_SCANNING");
 
             applicationContext.sendBroadcast(scanOnIntent);
         }
@@ -124,12 +134,28 @@ public class DataWedgeIntentHandler {
         }
     }
 
+    public JSONObject getImageItemFromWorkflowResult(JSONArray jsonArray) {
+
+        JSONObject item;
+        for (int i = 0; i < jsonArray.length(); i++) {
+            try {
+                item = jsonArray.getJSONObject(i);
+                if (!item.has("string_data")) {
+                    return item;
+                }
+            } catch (JSONException e) {
+                // some exception handler code.
+            }
+        }
+        return null; // Return null if no such item exists
+    }
+
     public void handleIntent(Intent intent){
         if (intent != null) {
-			String action = intent.getAction();
-			if(action != null && action.equals(DEFAULT_ACTION)) {
-				dataReceiver.onReceive(applicationContext, intent);
-			}
+            String action = intent.getAction();
+            if(action != null && action.equals(DEFAULT_ACTION)) {
+                dataReceiver.onReceive(applicationContext, intent);
+            }
         }
     }
 
@@ -142,6 +168,17 @@ public class DataWedgeIntentHandler {
         @Override
         public void onReceive(Context context, Intent intent) {
             Log.i(TAG, "Data receiver trigged");
+
+            Bundle extras = intent.getExtras();
+            if (extras != null) {
+                for (String key : extras.keySet()) {
+                    Object value = extras.get(key);
+                    Log.e(TAG, "Key: " + key + " Value: " + value);
+                }
+            } else {
+                Log.e(TAG, "No extras found in the intent.");
+            }
+
             try {
                 if("scanner".equalsIgnoreCase(intent.getStringExtra("com.motorolasolutions.emdk.datawedge.source"))) {
                     if (scanCallback == null) {
@@ -151,7 +188,74 @@ public class DataWedgeIntentHandler {
                     String barcode = intent.getStringExtra("com.motorolasolutions.emdk.datawedge.data_string");
                     String labelType = intent.getStringExtra("com.motorolasolutions.emdk.datawedge.label_type");
 
-                    scanCallback.execute(new BarcodeScan(labelType, barcode));
+                    scanCallback.execute(new BarcodeScan(labelType, barcode, ""));
+                } else if ("workflow".equalsIgnoreCase(intent.getStringExtra("com.symbol.datawedge.source"))) {
+                    Log.e(TAG, "in Workflow branch");
+                    if (scanCallback == null) {
+                        Log.e(TAG, "Scan data received, but callback is null.");
+                        return;
+                    }
+
+                    String barcode = intent.getStringExtra("com.symbol.datawedge.data");
+                    String labelType = intent.getStringExtra("workflow_name");
+                    JSONObject imageObj = new JSONObject();
+                    try {
+                        JSONArray resultArray = new JSONArray(barcode);
+                        imageObj = getImageItemFromWorkflowResult(resultArray);
+                        imageObj.put("imageBitmap", ImageProcessing.generateBitmapFromWorkflowObj(context, imageObj));
+                    } catch (Exception ex) {
+                        // Check error
+                        Log.i(TAG, "Error Get URI: " + ex);
+
+                    }
+
+                    scanCallback.execute(new BarcodeScan(labelType, barcode, imageObj.toString()));
+                } else if ("SIMULSCAN".equalsIgnoreCase(intent.getStringExtra("com.symbol.datawedge.label_id"))) {
+                    Log.e(TAG, "in multiple decode branch");
+                    if (scanCallback == null) {
+                        Log.e(TAG, "Scan data received, but callback is null.");
+                        return;
+                    }
+                    JSONObject imageObj = new JSONObject();
+                    JSONObject barcodeData = new JSONObject();
+                    ArrayList<Bundle> fields = extras.getParcelableArrayList("com.symbol.datawedge.data");
+                    String labelType = intent.getStringExtra("com.symbol.datawedge.label_id");
+
+                    for (Bundle field : fields) {
+                        Log.e(TAG, "bundle loop");
+                        for (String key : field.keySet()) {
+                            Object value = field.get(key);
+                            Log.e(TAG, "Key: " + key + " Value: " + value);
+                        }
+
+                        String decodeDataUri = field.getString("com.symbol.datawedge.field_data_uri");
+                        Cursor cursor = null;
+                        if (decodeDataUri != null)
+                            cursor = context.getContentResolver().query(Uri.parse(decodeDataUri),
+                                    null, null, null);
+                        if (cursor != null) {
+                            cursor.moveToFirst();
+                            try {
+                                labelType = cursor.getString(cursor.getColumnIndex("field_label_type"));
+                            } catch (Exception ex) {
+                            }
+                            Log.e(TAG, labelType);
+                            if (labelType.equals("LABEL-TYPE-SIGNATURE")) {
+                                imageObj.put("imageBitmap",ImageProcessing.generateBitmapFromNGSimulscanObj(context, cursor));
+
+                            } else {
+                                String dataString = cursor
+                                        .getString(cursor.getColumnIndex("field_string_data"));
+                                barcodeData.put("string_data", dataString);
+                                barcodeData.put("labelType", labelType);
+                                Log.e(TAG, "labelType: " + labelType);
+                                Log.e(TAG, "dataString: " + dataString);
+                            }
+                        }
+
+                    }
+
+                    scanCallback.execute(new BarcodeScan(labelType, barcodeData.toString(), imageObj.toString()));
                 } else {
                     if (magstripeCallback == null) {
                         Log.e(TAG, "Magstripe data received, but callback is null.");
@@ -163,7 +267,7 @@ public class DataWedgeIntentHandler {
                     for (int i=0; i<=2; i++) {
                         byte[] trackData = intent.getByteArrayExtra(String.format(TRACK_PREFIX_FORMAT, i+1));
                         int trackStatus = intent.getIntExtra(String.format(TRACK_STATUS_FORMAT, i+1),0);
-                        
+
                         if (trackStatus == 1) {//1 is valid
                             tracks.add(new String(trackData).trim());
                         } else {
@@ -171,10 +275,10 @@ public class DataWedgeIntentHandler {
                         }
                     }
                     magstripeCallback.execute(tracks);
-                    
+
                 }
 
-                
+
             } catch(Exception ex) {
                 Log.e(TAG, "Exception raised during callback processing.", ex);
             }

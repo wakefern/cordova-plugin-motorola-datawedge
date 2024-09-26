@@ -19,13 +19,19 @@ xmlns:android="http://schemas.android.com/apk/res/android"
             </feature>
         </config-file>
          <config-file target="AndroidManifest.xml" parent="/*/application/activity">
+            <uses-permission android:name="com.symbol.datawedge.permission.contentprovider" />
+            <queries>
+                <package android:name="com.symbol.datawedge" />
+            </queries>
            <intent-filter>
                 <action android:name="com.bluefletch.motorola.datawedge.ACTION" />
                 <category android:name="android.intent.category.DEFAULT" />
+                
             </intent-filter>
             
         </config-file>
         <source-file src="lib/android/com/bluefletch/motorola/BarcodeScan.java" target-dir="src/com/bluefletch/motorola" />
+        <source-file src="lib/android/com/bluefletch/motorola/ImageProcessing.java" target-dir="src/com/bluefletch/motorola" />
         <source-file src="lib/android/com/bluefletch/motorola/ScanCallback.java" target-dir="src/com/bluefletch/motorola" />
         <source-file src="lib/android/com/bluefletch/motorola/DataWedgeIntentHandler.java" target-dir="src/com/bluefletch/motorola" />
         <source-file src="src/android/com/bluefletch/motorola/plugin/MotorolaDatawedgePlugin.java" target-dir="src/com/bluefletch/motorola/plugin" />

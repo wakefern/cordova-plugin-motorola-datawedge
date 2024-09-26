@@ -25,18 +25,21 @@ import java.util.List;
 import com.bluefletch.motorola.BarcodeScan;
 import com.bluefletch.motorola.DataWedgeIntentHandler;
 import com.bluefletch.motorola.ScanCallback;
+import com.bluefletch.motorola.ImageProcessing;
 
 public class MotorolaDatawedgePlugin extends CordovaPlugin {
 
     private DataWedgeIntentHandler wedge;
+    private Context context;
     protected static String TAG = "MotorolaDatawedgePlugin";
 
     @Override
-    public void initialize(CordovaInterface cordova, CordovaWebView webView)
-    {
+    public void initialize(CordovaInterface cordova, CordovaWebView webView) {
         super.initialize(cordova, webView);
-        wedge = new DataWedgeIntentHandler(cordova.getActivity().getBaseContext());
+        context = cordova.getActivity().getBaseContext();
+        wedge = new DataWedgeIntentHandler(context);
     }
+
     @Override
     public boolean execute(String action, JSONArray args, final CallbackContext callbackContext) throws JSONException {
         if ("scanner.register".equals(action)) {
@@ -48,15 +51,16 @@ public class MotorolaDatawedgePlugin extends CordovaPlugin {
                     try {
                         JSONObject obj = new JSONObject();
                         obj.put("type", scan.LabelType);
-						obj.put("fullBarcode", scan.Barcode);
+                        obj.put("fullBarcode", scan.Barcode);
                         obj.put("barcode", scan.Barcode.substring( 0, scan.Barcode.length() - 1 ));
                         obj.put("checkDigit", scan.Barcode.substring( scan.Barcode.length() - 1 ));
+                        obj.put("image", scan.Image);
                         PluginResult pluginResult = new PluginResult(PluginResult.Status.OK, obj);
                         pluginResult.setKeepCallback(true);
                         callbackContext.sendPluginResult(pluginResult);
                     } catch(JSONException e){
                         Log.e(TAG, "Error building json object", e);
-
+                        
                     }
                 }
             });
@@ -78,7 +82,7 @@ public class MotorolaDatawedgePlugin extends CordovaPlugin {
 
         //register for magstripe callbacks
         else if ("magstripe.register".equals(action)){
-             wedge.setMagstripeReadCallback(new ScanCallback<List<String>>() {
+            wedge.setMagstripeReadCallback(new ScanCallback<List<String>>() {
                 @Override
                 public void execute(List<String> result) {
                     Log.i(TAG, "Magstripe result [" + result + "].");
@@ -126,8 +130,8 @@ public class MotorolaDatawedgePlugin extends CordovaPlugin {
         return true;
     }
     /**
-    * Always close the current intent reader
-    */
+     * Always close the current intent reader
+     */
     @Override
     public void onPause(boolean multitasking)
     {
@@ -143,8 +147,8 @@ public class MotorolaDatawedgePlugin extends CordovaPlugin {
     }
 
     /**
-    * Always resume the current activity
-    */
+     * Always resume the current activity
+     */
     @Override
     public void onResume(boolean multitasking)
     {
