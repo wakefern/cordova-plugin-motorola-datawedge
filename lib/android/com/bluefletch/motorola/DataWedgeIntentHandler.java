@@ -127,12 +127,21 @@ public class DataWedgeIntentHandler {
 
     public void switchProfile(String profile) {
         synchronized (stateLock) {
-            Intent profileIntent = new Intent("com.motorolasolutions.emdk.datawedge.api.ACTION_SETDEFAULTPROFILE");
-            profileIntent.putExtra("com.motorolasolutions.emdk.datawedge.api.EXTRA_PROFILENAME", profile);
+            Intent profileIntent = new Intent("com.symbol.datawedge.api.ACTION");
+            profileIntent.putExtra("com.symbol.datawedge.api.SWITCH_TO_PROFILE", profile);
 
             applicationContext.sendBroadcast(profileIntent);
         }
     }
+
+    // public void resetDataWedge(String profile) {
+    //     synchronized (stateLock) {
+    //         Intent profileIntent = new Intent("com.symbol.datawedge.api.ACTION");
+    //         profileIntent.putExtra("com.symbol.datawedge.api.RESET","");
+
+    //         applicationContext.sendBroadcast(profileIntent);
+    //     }
+    // }
 
     public JSONObject getImageItemFromWorkflowResult(JSONArray jsonArray) {
 

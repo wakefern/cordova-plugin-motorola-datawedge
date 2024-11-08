@@ -44,6 +44,11 @@ DataWedge.prototype.switchProfile = function (profileName) {
 };
 
 
+// DataWedge.prototype.resetDataWedge = function () {
+//     exec(null, null, 'MotorolaDataWedge', 'resetDataWedge', []);
+// };
+
+
 /**
  * Register a callback for scan events.  This function will be called when barcdoes are read
  */
