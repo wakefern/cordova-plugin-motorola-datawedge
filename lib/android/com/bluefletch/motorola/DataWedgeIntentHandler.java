@@ -1,9 +1,11 @@
 package com.bluefletch.motorola;
 
+import android.annotation.TargetApi;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.os.Build;
 import android.util.Log;
 
 import com.bluefletch.motorola.BarcodeScan;
@@ -63,7 +65,11 @@ public class DataWedgeIntentHandler {
 
             Log.i(TAG, "Register for Datawedge intent: " + dataWedgeAction);
 
-            applicationContext.registerReceiver(dataReceiver, new IntentFilter(dataWedgeAction));
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                applicationContext.registerReceiver(dataReceiver, new IntentFilter(dataWedgeAction), Context.RECEIVER_EXPORTED);
+            } else {
+                applicationContext.registerReceiver(dataReceiver, new IntentFilter(dataWedgeAction));
+            }
 
             enableScanner(true);
             hasInitialized = true;
